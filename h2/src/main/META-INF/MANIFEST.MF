@@ -11,7 +11,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: H2 Database Engine
 Bundle-SymbolicName: com.h2database
 Bundle-Vendor: H2 Group
-Bundle-Version: ${version}
+Bundle-Version: 1
 Bundle-License: https://h2database.com/html/license.html
 Bundle-Category: jdbc
 Multi-Release: true

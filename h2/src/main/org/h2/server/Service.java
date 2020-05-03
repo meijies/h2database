@@ -12,6 +12,10 @@ import java.sql.SQLException;
  * TCP/IP listener such as an FTP server.
  * The can be started and stopped, and may or may not
  * allow remote connections.
+ * 最主要的方法是init, start, listen方法
+ * init 初始化数据库
+ * start 构建用户连接
+ * listen 处理用户请求
  */
 public interface Service {
 

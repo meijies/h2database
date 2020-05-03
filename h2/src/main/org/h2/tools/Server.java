@@ -508,6 +508,7 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
     public Server start() throws SQLException {
         try {
             started = true;
+            // 只是初始化监听端口，以及数据库相关的初始化操作
             service.start();
             String url = service.getURL();
             int idx = url.indexOf('?');
@@ -515,6 +516,7 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
                 url = url.substring(0, idx);
             }
             String name = service.getName() + " (" + url + ')';
+            // 监听用户请求, 调用TcpServer和WebServer的listen方法
             Thread t = new Thread(this, name);
             t.setDaemon(service.isDaemon());
             t.start();

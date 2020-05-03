@@ -90,6 +90,8 @@ public class TcpServerThread implements Runnable {
                 if (!server.allow(transfer.getSocket())) {
                     throw DbException.get(ErrorCode.REMOTE_CONNECTION_NOT_ALLOWED);
                 }
+                // 读取用户请求信息
+                // 客户端版本号
                 int minClientVersion = transfer.readInt();
                 if (minClientVersion < 6) {
                     throw DbException.get(ErrorCode.DRIVER_VERSION_ERROR_2,
@@ -108,17 +110,23 @@ public class TcpServerThread implements Runnable {
                 } else {
                     clientVersion = maxClientVersion;
                 }
+                // 设置客户端版本信息，用于响应用户请求
                 transfer.setVersion(clientVersion);
+                // 读取数据库名
                 String db = transfer.readString();
+                // 读取原始的请求URL
                 String originalURL = transfer.readString();
                 if (db == null && originalURL == null) {
+                    // 读取SessionId
                     String targetSessionId = transfer.readString();
                     int command = transfer.readInt();
                     stop = true;
+                    // 1. 让一个会话失效（cancel session）
                     if (command == SessionRemote.SESSION_CANCEL_STATEMENT) {
                         // cancel a running statement
                         int statementId = transfer.readInt();
                         server.cancelStatement(targetSessionId, statementId);
+                        // 2. 将用户传过来的session和用户的session进行核对，核对失败就返回请求失败。
                     } else if (command == SessionRemote.SESSION_CHECK_KEY) {
                         // check if this is the correct server
                         db = server.checkKeyAndGetDatabaseName(targetSessionId);
@@ -129,16 +137,19 @@ public class TcpServerThread implements Runnable {
                         }
                     }
                 }
+
                 String baseDir = server.getBaseDir();
                 if (baseDir == null) {
                     baseDir = SysProperties.getBaseDir();
                 }
+                // 获得数据库名称，解析连接信息
                 db = server.checkKeyAndGetDatabaseName(db);
                 ConnectionInfo ci = new ConnectionInfo(db);
                 ci.setOriginalURL(originalURL);
                 ci.setUserName(transfer.readString());
                 ci.setUserPasswordHash(transfer.readBytes());
                 ci.setFilePasswordHash(transfer.readBytes());
+
                 int len = transfer.readInt();
                 for (int i = 0; i < len; i++) {
                     ci.setProperty(transfer.readString(), transfer.readString());
@@ -162,6 +173,7 @@ public class TcpServerThread implements Runnable {
                                 .append(':').append(socket.getLocalPort()).toString(), //
                         socket.getInetAddress().getAddress(), socket.getPort(),
                         new StringBuilder().append('P').append(clientVersion).toString()));
+                // 创建一个session
                 session = Engine.getInstance().createSession(ci);
                 transfer.setSession(session);
                 server.addConnection(threadId, originalURL, ci.getUserName());
@@ -178,6 +190,7 @@ public class TcpServerThread implements Runnable {
             lastRemoteSettingsId = session.getDatabase().getRemoteSettingsId();
             while (!stop) {
                 try {
+                    // 真实处理用户请求
                     process();
                 } catch (Throwable e) {
                     sendError(e);
@@ -264,6 +277,7 @@ public class TcpServerThread implements Runnable {
         }
     }
 
+    // TODO 需要了解客户端代码
     private void process() throws IOException {
         int operation = transfer.readInt();
         switch (operation) {

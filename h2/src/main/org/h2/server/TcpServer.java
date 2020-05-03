@@ -85,6 +85,11 @@ public class TcpServer implements Service {
         return "mem:" + MANAGEMENT_DB_PREFIX + port;
     }
 
+    /**
+     * 1. 创建内存数据库
+     * 2. 创建管理表(SESSION表， STOP_SERVER表)
+     * @throws SQLException
+     */
     private void initManagementDb() throws SQLException {
         if (managementPassword.isEmpty()) {
             managementPassword = StringUtils.convertBytesToHex(MathUtils.secureRandomBytes(32));
@@ -250,6 +255,7 @@ public class TcpServer implements Service {
                 throw e;
             }
         }
+        // 监听端口号
         port = serverSocket.getLocalPort();
         initManagementDb();
     }
@@ -260,14 +266,18 @@ public class TcpServer implements Service {
         String threadName = listenerThread.getName();
         try {
             while (!stop) {
+                // 接受一个来自客户端的请求，这个方法是阻塞的，这意味着无法支持非常高的并发
                 Socket s = serverSocket.accept();
                 NetUtils2.setTcpQuickack(s, true);
                 int id = nextThreadId++;
+                // 将用户请求交给TcpServerThread来处理
                 TcpServerThread c = new TcpServerThread(s, this, id);
                 running.add(c);
+                // 创建一个线程来执行TcpServerThread中定义的runnable方法。
                 Thread thread = new Thread(c, threadName + " thread-" + id);
                 thread.setDaemon(isDaemon);
                 c.setThread(thread);
+                // 执行方法
                 thread.start();
             }
             serverSocket = NetUtils.closeSilently(serverSocket);
